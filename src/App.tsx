@@ -1,14 +1,49 @@
 import "./App.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Wheel } from "react-custom-roulette";
+
+// Hook untuk fetch master mapping dari Google Sheets
+function useMasterMapping(sheetId: string, apiKey: string) {
+  const [master, setMaster] = useState<Record<string, "A" | "B" | "C">>({});
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A2:B100?key=${apiKey}`;
+        const res = await fetch(url);
+        const json = await res.json();
+
+        const newMaster: Record<string, "A" | "B" | "C"> = {};
+        json.values?.forEach(([nama, grup]: [string, string]) => {
+          if (nama && grup) {
+            newMaster[nama.trim().toLowerCase()] = grup as "A" | "B" | "C";
+          }
+        });
+
+        setMaster(newMaster);
+      } catch (err) {
+        console.error("Gagal fetch master mapping:", err);
+      }
+    };
+
+    fetchData();
+  }, [sheetId, apiKey]);
+
+  return master;
+}
 
 function App() {
   // Master mapping
-  const master: Record<string, "A" | "B" | "C"> = {
-    kuncoro: "A",
-    jeki: "B",
-    yatno: "C",
-  };
+  // const master: Record<string, "A" | "B" | "C"> = {
+  //   kuncoro: "A",
+  //   jeki: "B",
+  //   yatno: "C",
+  // };
+
+  const SHEET_ID = "1-H58WXJQHkCdxpjkyBn2tyT25jTiMJ3bb3wM2JViN7s"; // ganti sesuai spreadsheet
+  const API_KEY = "AIzaSyD8COwpSbFUlxKi2Fel_gpxuXhmtC6Q824"; // ganti API Key dari Google Cloud
+
+  const master = useMasterMapping(SHEET_ID, API_KEY);
 
   const [data, setData] = useState<{ option: string }[]>([]);
   const [newName, setNewName] = useState("");
