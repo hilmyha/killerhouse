@@ -33,29 +33,40 @@ function useMasterMapping(sheetId: string, apiKey: string) {
 }
 
 function App() {
-  // Master mapping
-  // const master: Record<string, "A" | "B" | "C"> = {
-  //   kuncoro: "A",
-  //   jeki: "B",
-  //   yatno: "C",
-  // };
+  // Generate warna random
+  function getRandomColor() {
+    const letters = "0123456789ABCDEF";
+    let color = "#";
+    for (let i = 0; i < 6; i++) {
+      color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+  }
 
-  const SHEET_ID = "1-H58WXJQHkCdxpjkyBn2tyT25jTiMJ3bb3wM2JViN7s"; // ganti sesuai spreadsheet
-  const API_KEY = "AIzaSyD8COwpSbFUlxKi2Fel_gpxuXhmtC6Q824"; // ganti API Key dari Google Cloud
+  const SHEET_ID = "1-H58WXJQHkCdxpjkyBn2tyT25jTiMJ3bb3wM2JViN7s";
+  const API_KEY = "AIzaSyD8COwpSbFUlxKi2Fel_gpxuXhmtC6Q824";
 
   const master = useMasterMapping(SHEET_ID, API_KEY);
 
-  const [data, setData] = useState<{ option: string }[]>([]);
+  const [data, setData] = useState<
+    { option: string; style: { backgroundColor: string; textColor: string } }[]
+  >([]);
   const [newName, setNewName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [mustSpin, setMustSpin] = useState(false);
   const [prizeNumber, setPrizeNumber] = useState(0);
-  // const [groupIndex, setGroupIndex] = useState(0); // giliran random/group
   const [groups, setGroups] = useState({
     A: [] as string[],
     B: [] as string[],
     C: [] as string[],
   });
+
+  // 🔔 Popup
+  const [announcement, setAnnouncement] = useState<{
+    name: string;
+    group: "A" | "B" | "C" | null;
+    message?: string;
+  } | null>(null);
 
   const handleSpinClick = () => {
     if (data.length === 0) return;
@@ -66,39 +77,69 @@ function App() {
 
   const handleStop = () => {
     const winner = data[prizeNumber].option.trim().toLowerCase();
-    const newGroups = { ...groups };
 
-    if (master[winner]) {
-      // kalau ada di master → langsung masuk grup sesuai mapping
-      newGroups[master[winner]].push(winner);
+    // cek apakah sudah ada di grup
+    const existingGroup =
+      (groups.A.includes(winner) && "A") ||
+      (groups.B.includes(winner) && "B") ||
+      (groups.C.includes(winner) && "C") ||
+      null;
+
+    if (existingGroup) {
+      // sudah ada, popup pesan khusus
+      setAnnouncement({
+        name: winner,
+        group: existingGroup,
+        message: `Nama sudah ada di Grup ${existingGroup}, tidak dimasukkan lagi.`,
+      });
     } else {
-      // cari grup dengan anggota paling sedikit
-      const counts = {
-        A: newGroups.A.length,
-        B: newGroups.B.length,
-        C: newGroups.C.length,
-      };
-      const minCount = Math.min(counts.A, counts.B, counts.C);
+      // assign grup baru
+      let assignedGroup: "A" | "B" | "C";
 
-      // filter grup yang masih paling sedikit anggotanya
-      const candidateGroups = (["A", "B", "C"] as const).filter(
-        (g) => counts[g] === minCount
-      );
+      if (master[winner]) {
+        assignedGroup = master[winner];
+      } else {
+        const counts = {
+          A: groups.A.length,
+          B: groups.B.length,
+          C: groups.C.length,
+        };
+        const minCount = Math.min(counts.A, counts.B, counts.C);
 
-      // pilih random dari grup yang kandidat
-      const chosen =
-        candidateGroups[Math.floor(Math.random() * candidateGroups.length)];
+        const candidateGroups = (["A", "B", "C"] as const).filter(
+          (g) => counts[g] === minCount
+        );
 
-      newGroups[chosen].push(winner);
+        assignedGroup =
+          candidateGroups[Math.floor(Math.random() * candidateGroups.length)];
+      }
+
+      setAnnouncement({
+        name: winner,
+        group: assignedGroup,
+      });
     }
 
-    setGroups(newGroups);
+    setMustSpin(false);
+  };
 
-    // Hapus dari spinner
+  const handleExit = () => {
+    if (!announcement) return;
+
+    const winner = data[prizeNumber].option.trim().toLowerCase();
+    const newGroups = { ...groups };
+
+    // hanya tambahkan jika belum ada sebelumnya
+    if (announcement.group && !newGroups[announcement.group].includes(winner)) {
+      newGroups[announcement.group].push(winner);
+      setGroups(newGroups);
+    }
+
+    // hapus dari spinner
     const newData = data.filter((_, i) => i !== prizeNumber);
     setData(newData);
 
-    setMustSpin(false);
+    setAnnouncement(null);
   };
 
   const handleAddName = () => {
@@ -116,7 +157,13 @@ function App() {
       return;
     }
 
-    setData([...data, { option: trimmedName }]);
+    setData([
+      ...data,
+      {
+        option: trimmedName,
+        style: { backgroundColor: getRandomColor(), textColor: "#ffffff" },
+      },
+    ]);
     setNewName("");
     setErrorMessage("");
   };
@@ -131,8 +178,6 @@ function App() {
             mustStartSpinning={mustSpin}
             prizeNumber={prizeNumber}
             data={data}
-            backgroundColors={["#3e3e3e", "#df3428"]}
-            textColors={["#ffffff"]}
             onStopSpinning={handleStop}
           />
           <button
@@ -203,6 +248,40 @@ function App() {
           )}
         </tbody>
       </table>
+
+      {/* Popup pengumuman */}
+      {announcement && (
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border-4 border-blue-500 p-6 rounded shadow-lg z-50">
+          <h2 className="text-xl font-bold mb-2">Pengumuman!</h2>
+          <p className="text-lg">
+            Nama: <span className="font-semibold">{announcement.name}</span>
+          </p>
+          <p className="text-lg">
+            {announcement.message ? (
+              <span className="text-red-600">{announcement.message}</span>
+            ) : (
+              <>
+                Masuk Grup:{" "}
+                <span className="font-semibold">{announcement.group}</span>
+              </>
+            )}
+          </p>
+
+          <button
+            onClick={handleExit}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+          >
+            OK
+          </button>
+
+          <button
+            onClick={() => setAnnouncement(null)}
+            className="mt-4 ml-2 px-4 py-2 bg-gray-500 text-white rounded"
+          >
+            Tutup
+          </button>
+        </div>
+      )}
     </div>
   );
 }
