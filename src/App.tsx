@@ -52,7 +52,6 @@ function App() {
     { option: string; style: { backgroundColor: string; textColor: string } }[]
   >([]);
   const [newName, setNewName] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
   const [mustSpin, setMustSpin] = useState(false);
   const [prizeNumber, setPrizeNumber] = useState(0);
   const [groups, setGroups] = useState({
@@ -78,7 +77,6 @@ function App() {
   const handleStop = () => {
     const winner = data[prizeNumber].option.trim().toLowerCase();
 
-    // cek apakah sudah ada di grup
     const existingGroup =
       (groups.A.includes(winner) && "A") ||
       (groups.B.includes(winner) && "B") ||
@@ -86,14 +84,12 @@ function App() {
       null;
 
     if (existingGroup) {
-      // sudah ada, popup pesan khusus
       setAnnouncement({
         name: winner,
         group: existingGroup,
         message: `Nama sudah ada di Grup ${existingGroup}, tidak dimasukkan lagi.`,
       });
     } else {
-      // assign grup baru
       let assignedGroup: "A" | "B" | "C";
 
       if (master[winner]) {
@@ -129,7 +125,6 @@ function App() {
     const winner = data[prizeNumber].option.trim().toLowerCase();
     const newGroups = { ...groups };
 
-    // hanya tambahkan jika belum ada sebelumnya
     if (announcement.group && !newGroups[announcement.group].includes(winner)) {
       newGroups[announcement.group].push(winner);
       setGroups(newGroups);
@@ -139,54 +134,50 @@ function App() {
     const newData = data.filter((_, i) => i !== prizeNumber);
     setData(newData);
 
+    // sinkronkan textarea juga
+    setNewName(newData.map((item) => item.option).join("\n"));
+
     setAnnouncement(null);
   };
 
-  const handleAddName = () => {
-    const trimmedName = newName.trim();
-    if (trimmedName === "") {
-      setErrorMessage("Nama tidak boleh kosong!");
-      return;
-    }
+  // 🔑 sinkronisasi newName → data
+  useEffect(() => {
+    const names = newName
+      .split("\n")
+      .map((n) => n.trim())
+      .filter((n) => n !== "");
 
-    const isDuplicate = data.some(
-      (item) => item.option.toLowerCase() === trimmedName.toLowerCase()
-    );
-    if (isDuplicate) {
-      setErrorMessage("Nama sudah ada di daftar!");
-      return;
-    }
+    const newEntries = names.map((name) => {
+      const existing = data.find(
+        (item) => item.option.toLowerCase() === name.toLowerCase()
+      );
+      return (
+        existing || {
+          option: name,
+          style: { backgroundColor: getRandomColor(), textColor: "#ffffff"},
+        }
+      );
+    });
 
-    setData([
-      ...data,
-      {
-        option: trimmedName,
-        style: { backgroundColor: getRandomColor(), textColor: "#ffffff" },
-      },
-    ]);
-    setNewName("");
-    setErrorMessage("");
-  };
+    setData(newEntries);
+  }, [newName]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-4">
-      <h1 className="text-2xl font-bold">Spin Wheel Grup A-B-C</h1>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-4 bg-gray-50">
+      {/* <h1 className="text-2xl font-bold">Spin Wheel Grup A-B-C</h1> */}
 
       {data.length > 0 ? (
         <>
           <Wheel
             mustStartSpinning={mustSpin}
             prizeNumber={prizeNumber}
+            outerBorderWidth={0}
+            radiusLineWidth={0}
+            innerRadius={20}
+            fontSize={38}
             data={data}
             onStopSpinning={handleStop}
           />
-          <button
-            onClick={handleSpinClick}
-            className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-400"
-            disabled={mustSpin}
-          >
-            SPIN
-          </button>
         </>
       ) : (
         <p className="text-red-500 font-semibold">
@@ -194,92 +185,108 @@ function App() {
         </p>
       )}
 
-      {/* Form tambah data */}
-      <div className="flex flex-col items-center gap-2 mt-4">
-        <div className="flex gap-2">
-          <input
-            type="text"
+      {/* Textarea sinkron */}
+      <div className="absolute bg-gray-100 right-0 top-0 h-full p-4 flex flex-col justify-center items-start gap-2">
+        <div className="flex flex-col gap-2 w-64">
+          <textarea
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            className="border px-3 py-2 rounded w-64"
-            placeholder="Masukkan nama"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                setNewName((prev) => prev + "\n");
+              }
+            }}
+            className="px-3 py-2 rounded border border-gray-400 bg-white h-[40vh] resize-none"
+            placeholder="Masukkan nama (satu per baris)"
           />
           <button
-            onClick={handleAddName}
-            className="px-4 py-2 bg-green-500 text-white rounded"
+            onClick={handleSpinClick}
+            className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-400 w-full"
+            disabled={mustSpin}
           >
-            Tambah
+            SPIN
           </button>
         </div>
-        {errorMessage && <p className="text-red-500 text-sm">{errorMessage}</p>}
       </div>
 
       {/* Tabel hasil */}
-      <table className="border-collapse border border-gray-400 w-full max-w-2xl mt-6 text-center">
-        <thead>
-          <tr>
-            <th className="border border-gray-400 px-4 py-2">Grup A</th>
-            <th className="border border-gray-400 px-4 py-2">Grup B</th>
-            <th className="border border-gray-400 px-4 py-2">Grup C</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Array.from(
-            {
-              length: Math.max(
-                groups.A.length,
-                groups.B.length,
-                groups.C.length
-              ),
-            },
-            (_, i) => (
-              <tr key={i}>
-                <td className="border border-gray-400 px-4 py-2">
-                  {groups.A[i] || ""}
-                </td>
-                <td className="border border-gray-400 px-4 py-2">
-                  {groups.B[i] || ""}
-                </td>
-                <td className="border border-gray-400 px-4 py-2">
-                  {groups.C[i] || ""}
-                </td>
+      <div className="w-full max-w-3xl mt-8">
+        <h2 className="text-xl font-semibold mb-4 text-gray-700">
+          Hasil Pembagian Grup
+        </h2>
+        <div className="overflow-x-auto rounded-lg shadow-md">
+          <table className="w-full border-collapse bg-white text-gray-700">
+            <thead>
+              <tr className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white">
+                <th className="px-4 py-3 text-sm font-semibold">Grup A</th>
+                <th className="px-4 py-3 text-sm font-semibold">Grup B</th>
+                <th className="px-4 py-3 text-sm font-semibold">Grup C</th>
               </tr>
-            )
-          )}
-        </tbody>
-      </table>
+            </thead>
+            <tbody>
+              {Array.from(
+                {
+                  length: Math.max(
+                    groups.A.length,
+                    groups.B.length,
+                    groups.C.length
+                  ),
+                },
+                (_, i) => (
+                  <tr
+                    key={i}
+                    className={i % 2 === 0 ? "bg-gray-50" : "bg-white"}
+                  >
+                    <td className="px-4 py-2 capitalize border border-gray-200 text-center">
+                      {groups.A[i] || "-"}
+                    </td>
+                    <td className="px-4 py-2 capitalize border border-gray-200 text-center">
+                      {groups.B[i] || "-"}
+                    </td>
+                    <td className="px-4 py-2 capitalize border border-gray-200 text-center">
+                      {groups.C[i] || "-"}
+                    </td>
+                  </tr>
+                )
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Popup pengumuman */}
       {announcement && (
-        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border-4 border-blue-500 p-6 rounded shadow-lg z-50">
-          <h2 className="text-xl font-bold mb-2">Pengumuman!</h2>
-          <p className="text-lg">
-            Nama: <span className="font-semibold">{announcement.name}</span>
-          </p>
-          <p className="text-lg">
+        <div className="fixed w-[1200px] h-[500px] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center bg-gray-200 p-6 rounded shadow-lg z-50">
+          <h2 className="text-6xl font-bold mb-2 capitalize">
+            {announcement.name}
+          </h2>
+          <p className="text-3xl">
             {announcement.message ? (
               <span className="text-red-600">{announcement.message}</span>
             ) : (
               <>
-                Masuk Grup:{" "}
+                Terpilih ke grup{" "}
                 <span className="font-semibold">{announcement.group}</span>
               </>
             )}
           </p>
 
-          <button
-            onClick={handleExit}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
-          >
-            OK
-          </button>
+          <div className="mt-8 flex items-center">
+            <button
+              onClick={handleExit}
+              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+            >
+              OK
+            </button>
 
-          <button
-            onClick={() => setAnnouncement(null)}
-            className="mt-4 ml-2 px-4 py-2 bg-gray-500 text-white rounded"
-          >
-            Tutup
-          </button>
+            <button
+              onClick={() => setAnnouncement(null)}
+              className="mt-4 ml-2 px-4 py-2 bg-gray-500 text-white rounded"
+            >
+              Tutup
+            </button>
+          </div>
         </div>
       )}
     </div>
