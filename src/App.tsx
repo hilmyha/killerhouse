@@ -185,6 +185,13 @@ function App() {
               spinDuration={0.5}
               onStopSpinning={handleStop}
             />
+            <button
+              onClick={handleSpinClick}
+              className="mt-4 px-12 py-2 text-lg font-semibold bg-gradient-to-r from-red-500 to-orange-500 text-white rounded hover:bg-gradient-to-r hover:from-red-600 hover:to-orange-600 disabled:bg-gray-400"
+              disabled={mustSpin}
+            >
+              Spin
+            </button>
           </>
         ) : (
           <p className="text-red-500 text-xl">
@@ -207,13 +214,6 @@ function App() {
               className="mb-4 px-3 py-2 rounded bg-gray-600 text-white h-[40vh] resize-none"
               placeholder="Masukkan nama (satu per baris)"
             />
-            <button
-              onClick={handleSpinClick}
-              className="px-4 py-2 text-lg font-semibold bg-gradient-to-r from-red-500 to-orange-500 text-white rounded disabled:bg-gray-400 w-full"
-              disabled={mustSpin}
-            >
-              Spin
-            </button>
           </div>
         </div>
         {/* Tabel hasil */}
