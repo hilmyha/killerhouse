@@ -4,7 +4,9 @@ import { Wheel } from "react-custom-roulette";
 
 // Hook untuk fetch master mapping dari Google Sheets
 function useMasterMapping(sheetId: string, apiKey: string) {
-  const [master, setMaster] = useState<Record<string, "A" | "B" | "C">>({});
+  const [master, setMaster] = useState<Record<string, "A" | "B" | "C" | "D">>(
+    {}
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -13,10 +15,14 @@ function useMasterMapping(sheetId: string, apiKey: string) {
         const res = await fetch(url);
         const json = await res.json();
 
-        const newMaster: Record<string, "A" | "B" | "C"> = {};
+        const newMaster: Record<string, "A" | "B" | "C" | "D"> = {};
         json.values?.forEach(([nama, grup]: [string, string]) => {
           if (nama && grup) {
-            newMaster[nama.trim().toLowerCase()] = grup as "A" | "B" | "C";
+            newMaster[nama.trim().toLowerCase()] = grup as
+              | "A"
+              | "B"
+              | "C"
+              | "D";
           }
         });
 
@@ -55,12 +61,13 @@ function App() {
     A: [] as string[],
     B: [] as string[],
     C: [] as string[],
+    D: [] as string[],
   });
 
   // 🔔 Popup
   const [announcement, setAnnouncement] = useState<{
     name: string;
-    group: "A" | "B" | "C" | null;
+    group: "A" | "B" | "C" | "D" | null;
     message?: string;
   } | null>(null);
 
@@ -78,6 +85,7 @@ function App() {
       (groups.A.includes(winner) && "A") ||
       (groups.B.includes(winner) && "B") ||
       (groups.C.includes(winner) && "C") ||
+      (groups.D.includes(winner) && "D") ||
       null;
 
     if (existingGroup) {
@@ -87,7 +95,7 @@ function App() {
         message: `Nama sudah ada di Grup ${existingGroup}, tidak dimasukkan lagi.`,
       });
     } else {
-      let assignedGroup: "A" | "B" | "C";
+      let assignedGroup: "A" | "B" | "C" | "D";
 
       if (master[winner]) {
         assignedGroup = master[winner];
@@ -96,10 +104,11 @@ function App() {
           A: groups.A.length,
           B: groups.B.length,
           C: groups.C.length,
+          D: groups.D.length,
         };
         const minCount = Math.min(counts.A, counts.B, counts.C);
 
-        const candidateGroups = (["A", "B", "C"] as const).filter(
+        const candidateGroups = (["A", "B", "C", "D"] as const).filter(
           (g) => counts[g] === minCount
         );
 
@@ -217,7 +226,7 @@ function App() {
           </div>
         </div>
         {/* Tabel hasil */}
-        <div className="w-full max-w-3xl mt-8">
+        {/* <div className="w-full max-w-3xl mt-8">
           <h2 className="text-xl font-semibold mb-4 text-gray-100">
             Hasil Pembagian Grup
           </h2>
@@ -259,7 +268,7 @@ function App() {
               </tbody>
             </table>
           </div>
-        </div>
+        </div> */}
         {/* Popup pengumuman */}
         {announcement && (
           <div className="fixed w-[1200px] h-[500px] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center bg-gray-200 p-6 rounded shadow-lg z-50">
@@ -271,7 +280,6 @@ function App() {
                 <span className="text-red-600">{announcement.message}</span>
               ) : (
                 <>
-                  Terpilih ke grup{" "}
                   <span className="font-semibold">{announcement.group}</span>
                 </>
               )}
@@ -285,12 +293,12 @@ function App() {
                 OK
               </button>
 
-              <button
+              {/* <button
                 onClick={() => setAnnouncement(null)}
                 className="mt-4 ml-2 px-4 py-2 bg-gray-500 text-white rounded"
               >
                 Tutup
-              </button>
+              </button> */}
             </div>
           </div>
         )}
