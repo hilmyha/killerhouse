@@ -176,6 +176,7 @@ function App() {
             innerRadius={20}
             fontSize={38}
             data={data}
+            spinDuration={0.5}
             onStopSpinning={handleStop}
           />
         </>
@@ -197,7 +198,7 @@ function App() {
                 setNewName((prev) => prev + "\n");
               }
             }}
-            className="px-3 py-2 rounded border border-gray-400 bg-white h-[40vh] resize-none"
+            className="px-3 py-2 rounded bg-white h-[40vh] resize-none"
             placeholder="Masukkan nama (satu per baris)"
           />
           <button
